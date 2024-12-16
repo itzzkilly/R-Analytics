@@ -1,0 +1,94 @@
+---
+title: "SentimentAnalysis_Magallanes-Trongoy-Nava"
+author: "Killy Magallanes"
+date: "2024-12-13"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(tidytext)
+library(ggplot2)
+library(scales)
+```
+
+
+Load Data
+```{r}
+# Load the dataset
+tweets_df <- read.csv("TweetsDF.csv", stringsAsFactors = FALSE)
+
+# Display the first few rows of the dataset
+head(tweets_df)
+```
+Data Cleaning
+```{r}
+# Remove duplicates
+tweets_df <- tweets_df %>% distinct()
+
+# Convert created column to date-time
+tweets_df$created <- as.POSIXct(tweets_df$created, format="%Y-%m-%d %H:%M:%S")
+
+# Remove rows with missing text
+tweets_df <- tweets_df %>% filter(!is.na(text))
+
+# Display the cleaned dataset
+glimpse(tweets_df)
+```
+
+Sentiment Analysis
+```{r}
+# Unnest tokens and perform sentiment analysis
+sentiment_df <- tweets_df %>%
+  unnest_tokens(word, text) %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(screenName, sentiment) %>%
+  spread(sentiment, n, fill = 0) %>%
+  mutate(sentiment_score = positive - negative)
+
+# Display sentiment scores
+head(sentiment_df)
+```
+Trend analysis
+
+```{r}
+# Create a new column for date
+tweets_df$date <- as.Date(tweets_df$created)
+
+# Count tweets per day
+daily_tweets <- tweets_df %>%
+  group_by(date) %>%
+  summarise(tweet_count = n())
+
+# Plot the trend of tweets over time
+ggplot(daily_tweets, aes(x = date, y = tweet_count)) +
+  geom_line(color = "blue") +
+  labs(title = "Trend of Tweets Over Time",
+       x = "Date",
+       y = "Number of Tweets") +
+  theme_minimal()
+```
+Sentiment Score Validation
+
+```{r}
+# Plot sentiment scores
+ggplot(sentiment_df, aes(x = screenName, y = sentiment_score, fill = sentiment_score > 0)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(title = "Sentiment Scores by User",
+       x = "User ",
+       y = "Sentiment Score") +
+  scale_fill_manual(values = c("red", "green"), labels = c("Negative", "Positive")) +
+  theme_minimal()
+```
+The sentiment score visualization shows the sentiment of tweets by user. Positive scores indicate a higher number of positive words in their tweets, while negative scores indicate the opposite. This can help identify which users are more positive or negative about a topic.
+
+In this analysis, we performed sentiment analysis and trend analysis on a dataset of tweets. We cleaned the data, analyzed the sentiment of the tweets, and visualized trends over time. The insights gained can be useful for understanding public sentiment and engagement on social media platforms.
